@@ -37,6 +37,7 @@ import pathlib
 from argparse import ArgumentParser, ArgumentDefaultsHelpFormatter
 
 import numpy as np
+from PIL import Image
 import torch
 from scipy import linalg
 from scipy.misc import imread
@@ -111,6 +112,7 @@ def get_activations(files, model, batch_size=50, dims=2048,
                            for f in files[start:end]])
 
         # Reshape to (n_images, 3, height, width)
+        # print(images.shape)
         images = images.transpose((0, 3, 1, 2))
         images /= 255
 
@@ -222,7 +224,16 @@ def _compute_statistics_of_path(path, model, batch_size, dims, cuda):
         f.close()
     else:
         path = pathlib.Path(path)
-        files = list(path.glob('*.jpg')) + list(path.glob('*.png'))
+        _files = list(path.glob('*.jpg')) + list(path.glob('*.png')) + list(path.glob('*.jpeg'))
+
+        ## Check images
+        files = []
+        for _file in _files:
+            img = Image.open(_file)
+            if img.mode != 'RGB':
+                continue
+            files.append(_file)
+        
         m, s = calculate_activation_statistics(files, model, batch_size,
                                                dims, cuda)
 
@@ -249,11 +260,11 @@ def calculate_fid_given_paths(paths, batch_size, cuda, dims):
 
     return fid_value
 
-
 if __name__ == '__main__':
     args = parser.parse_args()
     os.environ['CUDA_VISIBLE_DEVICES'] = args.gpu
 
+    print('FID score calculating..')
     fid_value = calculate_fid_given_paths(args.path,
                                           args.batch_size,
                                           args.gpu != '',
